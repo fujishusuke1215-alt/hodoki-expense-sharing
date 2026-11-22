@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { groups } from "../../../../db/schema";
-import type { Expense, ExpenseGroup, Member } from "../../../../lib/types";
+import type { Activity, Expense, ExpenseGroup, Member, Repayment } from "../../../../lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +36,17 @@ function validateGroup(payload: unknown): Omit<ExpenseGroup, "id" | "version"> |
   }
   if (!validShareMap(payload.shares, members)) return null;
 
+  const rawActivities = payload.activities ?? [];
+  if (!Array.isArray(rawActivities) || rawActivities.length > 200) return null;
+  const activities: Activity[] = [];
+  for (const raw of rawActivities) {
+    if (!isRecord(raw) || typeof raw.id !== "string" || typeof raw.title !== "string" || typeof raw.date !== "string") return null;
+    const id = raw.id.trim();
+    const activityTitle = raw.title.trim().slice(0, 80);
+    if (!id || !activityTitle || activities.some((activity) => activity.id === id) || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) return null;
+    activities.push({ id, title: activityTitle, date: raw.date });
+  }
+
   const expenses: Expense[] = [];
   for (const raw of payload.expenses) {
     if (!isRecord(raw) || typeof raw.id !== "string" || typeof raw.title !== "string" || typeof raw.payerId !== "string" || typeof raw.date !== "string") return null;
@@ -45,6 +56,8 @@ function validateGroup(payload: unknown): Omit<ExpenseGroup, "id" | "version"> |
     if (!id || !title || !Number.isSafeInteger(amount) || amount < 1 || amount > 100_000_000) return null;
     if (!members.some((member) => member.id === raw.payerId) || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) return null;
     if (raw.shares !== null && !validShareMap(raw.shares, members)) return null;
+    const eventId = raw.eventId == null ? null : typeof raw.eventId === "string" ? raw.eventId : undefined;
+    if (eventId === undefined || (eventId !== null && !activities.some((activity) => activity.id === eventId))) return null;
     expenses.push({
       id,
       title,
@@ -52,17 +65,34 @@ function validateGroup(payload: unknown): Omit<ExpenseGroup, "id" | "version"> |
       payerId: raw.payerId,
       date: raw.date,
       shares: raw.shares as Record<string, number> | null,
+      eventId,
     });
   }
 
-  return { title, members, shares: payload.shares as Record<string, number>, expenses };
+  const rawRepayments = payload.repayments ?? [];
+  if (!Array.isArray(rawRepayments) || rawRepayments.length > 10000) return null;
+  const repayments: Repayment[] = [];
+  for (const raw of rawRepayments) {
+    if (!isRecord(raw) || typeof raw.id !== "string" || typeof raw.fromId !== "string" || typeof raw.toId !== "string" || typeof raw.date !== "string") return null;
+    const id = raw.id.trim();
+    const fromId = raw.fromId.trim();
+    const toId = raw.toId.trim();
+    const amount = Number(raw.amount);
+    const note = typeof raw.note === "string" ? raw.note.trim().slice(0, 120) : "";
+    if (!id || !fromId || !toId || fromId === toId || repayments.some((repayment) => repayment.id === id)) return null;
+    if (!members.some((member) => member.id === fromId) || !members.some((member) => member.id === toId)) return null;
+    if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100_000_000 || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) return null;
+    repayments.push({ id, fromId, toId, amount, date: raw.date, note });
+  }
+
+  return { title, members, shares: payload.shares as Record<string, number>, expenses, activities, repayments };
 }
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   const [group] = await getDb().select().from(groups).where(eq(groups.id, id)).limit(1);
   if (!group) return Response.json({ error: "このグループは見つかりませんでした。" }, { status: 404 });
-  return Response.json({ group });
+  return Response.json({ group: { ...group, activities: group.activities ?? [], repayments: group.repayments ?? [] } });
 }
 
 export async function PUT(request: Request, context: RouteContext) {

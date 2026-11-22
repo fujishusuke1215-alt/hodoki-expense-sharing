@@ -1,6 +1,6 @@
 {
   "name": "hodoki-expense-sharing",
-  "description": "A shared expense notebook with configurable percentage splits.",
+  "description": "A shared expense notebook with percentage splits, recurring activities, and separate repayment tracking.",
   "version": "0.1.0",
   "private": true,
   "engines": {

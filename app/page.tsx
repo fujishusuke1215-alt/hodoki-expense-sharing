@@ -104,7 +104,8 @@ export default function HomePage() {
           <div className="feature-pills">
             <span><i>01</i> 全体の割合を設定</span>
             <span><i>02</i> 明細ごとに上書き</span>
-            <span><i>03</i> 精算額を自動計算</span>
+            <span><i>03</i> 回ごとに記録・確認</span>
+            <span><i>04</i> 送金記録を別管理</span>
           </div>
           <div className="hero-note"><span className="note-icon"><Users size={16} /></span><span>アカウント登録なし。グループのリンクを共有すれば、メンバーも一緒に編集できます。</span></div>
         </div>

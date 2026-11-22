@@ -38,19 +38,27 @@ export function expenseAllocations(expense: Expense, group: Pick<ExpenseGroup, "
   return amountByPercent(expense.amount, expense.shares ?? group.shares, group.members);
 }
 
-export function calculateLedger(group: Pick<ExpenseGroup, "members" | "shares" | "expenses">) {
+export function calculateLedger(group: Pick<ExpenseGroup, "members" | "shares" | "expenses"> & Partial<Pick<ExpenseGroup, "repayments">>) {
   const paid = Object.fromEntries(group.members.map((member) => [member.id, 0])) as Record<string, number>;
   const owed = Object.fromEntries(group.members.map((member) => [member.id, 0])) as Record<string, number>;
+  const sent = Object.fromEntries(group.members.map((member) => [member.id, 0])) as Record<string, number>;
+  const received = Object.fromEntries(group.members.map((member) => [member.id, 0])) as Record<string, number>;
   for (const expense of group.expenses) {
     paid[expense.payerId] = (paid[expense.payerId] || 0) + expense.amount;
     const allocations = expenseAllocations(expense, group);
     for (const member of group.members) owed[member.id] += allocations[member.id] || 0;
   }
+  for (const repayment of group.repayments ?? []) {
+    sent[repayment.fromId] = (sent[repayment.fromId] || 0) + repayment.amount;
+    received[repayment.toId] = (received[repayment.toId] || 0) + repayment.amount;
+  }
   const balances = group.members.map((member) => ({
     member,
     paid: paid[member.id] || 0,
     owed: owed[member.id] || 0,
-    net: (paid[member.id] || 0) - (owed[member.id] || 0),
+    sent: sent[member.id] || 0,
+    received: received[member.id] || 0,
+    net: (paid[member.id] || 0) - (owed[member.id] || 0) + (sent[member.id] || 0) - (received[member.id] || 0),
   }));
   const creditors = balances.filter((entry) => entry.net > 0).map((entry) => ({ member: entry.member, remaining: entry.net }));
   const debtors = balances.filter((entry) => entry.net < 0).map((entry) => ({ member: entry.member, remaining: -entry.net }));

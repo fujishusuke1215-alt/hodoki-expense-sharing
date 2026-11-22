@@ -35,7 +35,7 @@ function validateInitial(payload: unknown): Omit<ExpenseGroup, "id" | "version">
     members.push({ id, name });
   }
   if (!validShareMap(payload.shares, members)) return null;
-  return { title, members, shares: payload.shares as Record<string, number>, expenses: [] };
+  return { title, members, shares: payload.shares as Record<string, number>, expenses: [], activities: [], repayments: [] };
 }
 
 export async function POST(request: Request) {
