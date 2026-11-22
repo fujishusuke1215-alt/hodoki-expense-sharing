@@ -6,7 +6,7 @@ import { calculateLedger, equalShares, expenseAllocations, formatYen, normalizeS
 import type { Expense, ExpenseGroup, Member } from "../lib/types";
 
 const COLORS = ["#9c4e32", "#466a52", "#73649a", "#b87927", "#357787", "#a04b69", "#55724b", "#4d658f"];
-const PERCENT_TOLERANCE = 0.011;
+const PERCENT_TOLERANCE = 0.001;
 
 function remember(group: Pick<ExpenseGroup, "id" | "title" | "updatedAt">) {
   try {
@@ -303,7 +303,7 @@ export default function GroupExperience({ id }: { id: string }) {
         <section className="panel-card settlement-panel">
           <div className="panel-heading compact-heading"><div><div className="panel-kicker">SETTLEMENT</div><h2>精算のまとめ</h2></div><button className="icon-button small" onClick={copySettlement} type="button" aria-label="精算内容をコピー" title="精算内容をコピー">{copiedSummary ? <Check size={16} /> : <Copy size={16} />}</button></div>
           {ledger.settlements.length ? <div className="settlement-list">{ledger.settlements.map((settlement, index) => <div className="settlement-row" key={`${settlement.from.id}-${settlement.to.id}-${index}`}><div className="settlement-people"><span>{settlement.from.name}</span><ArrowRight size={15} /><span>{settlement.to.name}</span></div><strong>{formatYen(settlement.amount)}</strong></div>)}</div> : <div className="settled-state"><span className="settled-check"><Check size={16} /></span><div><strong>いまのところ精算は不要です</strong><small>全員の支払額と負担額が一致しています。</small></div></div>}
-          <div className="settlement-caption"><span className="save-dot" />立替合計と負担額から最小の送金回数で計算</div>
+          <div className="settlement-caption"><span className="save-dot" />立替合計と負担額から精算の送金先と金額を計算</div>
           {notice && <p className="inline-notice" role="status">{notice}</p>}
         </section>
       </aside>

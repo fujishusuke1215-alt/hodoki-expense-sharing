@@ -17,7 +17,7 @@ function validShareMap(value: unknown, members: Member[]) {
   if (Object.keys(value).length !== ids.length || ids.some((id) => !(id in value))) return false;
   const shares = Object.values(value);
   if (shares.some((share) => typeof share !== "number" || !Number.isFinite(share) || share < 0 || share > 100)) return false;
-  return Math.abs(shares.reduce<number>((sum, share) => sum + Number(share), 0) - 100) < 0.011;
+  return Math.abs(shares.reduce<number>((sum, share) => sum + Number(share), 0) - 100) < 0.001;
 }
 
 function validateGroup(payload: unknown): Omit<ExpenseGroup, "id" | "version"> | null {
